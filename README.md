@@ -87,7 +87,7 @@ Browser (Next.js + Monaco)
 
 ## Not done yet
 
-- **Sign-in live proof.** Token sign-in is in the code (see [docs/auth.md](docs/auth.md)), but it is not yet run against a real Supabase project. Without configuration, the stack uses the development sign-in: do not put that on a public host.
+- **Email-link test by a person.** Token sign-in is proven against the real Supabase project at the API (see [docs/auth.md](docs/auth.md)). The email link is not yet tested by a person. Without a `.env` file, the stack uses the development sign-in: do not put that on a public host.
 - **Databricks live proof.** The Databricks backend is not yet run against a real workspace.
 - **Migrations.** Tables are created at startup. Add Alembic before the schema changes.
 - Monthly quotas, Tier B (Terraform labs), SSE log streaming.

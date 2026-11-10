@@ -7,8 +7,11 @@ The API has 2 identity modes. `DF_AUTH_MODE` selects one.
 | `jwt` | A signed token in `Authorization: Bearer <token>` | Pilot and production |
 | `dev` | The `X-Dev-User` header, not verified | Local work and CI only |
 
-**Status:** `jwt` mode is tested with a local key pair. It is not yet run
-against a real Supabase project.
+**Status (10 November 2026):** the API is proven against the real Supabase
+project `dataforge` (eu-north-1). A real ES256 token got HTTP 200, and a
+changed token, the project's HS256 key, and the development header got
+HTTP 401. The email link itself (email delivery and the redirect to the web
+app) is not yet tested by a person.
 
 ## How `jwt` mode works
 
@@ -36,7 +39,8 @@ email address and no password. To change the provider later, change the 3
 3. In **Authentication, URL configuration**, set the site URL to the address
    of the web app (`http://localhost:3000` for the local stack) and add it to
    the redirect URLs.
-4. Set these values (for the local stack, in a file named `.env`):
+4. Set these values. For the local stack, `.env.example` has the values of
+   the `dataforge` project: copy it to `.env`.
 
 | Variable | Value |
 |---|---|
