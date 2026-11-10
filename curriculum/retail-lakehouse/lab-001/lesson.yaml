@@ -1,0 +1,19 @@
+id: lab-001
+version: 1
+title: Build and Test a Retail Customer Staging Model
+level: beginner
+duration_minutes: 60
+objectives:
+  - Reference a dbt source
+  - Create a staging model with standardized columns
+  - Pass dbt data-quality tests
+# Files the learner can read and write. All other project files are trusted
+# and come from project/ at execution time.
+editable_files:
+  - models/staging/stg_customers.sql
+operations:
+  - id: dbt_build
+    title: Build and test
+validation:
+  minimum_score: 80
+  require_all_critical_checks: true

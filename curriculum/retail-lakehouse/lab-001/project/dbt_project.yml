@@ -1,0 +1,17 @@
+name: retail_lakehouse
+version: "1.0.0"
+config-version: 2
+profile: retail_lakehouse
+model-paths: ["models"]
+seed-paths: ["seeds"]
+flags:
+  send_anonymous_usage_stats: false
+seeds:
+  retail_lakehouse:
+    raw_customers:
+      +column_types:
+        customer_id: varchar
+models:
+  retail_lakehouse:
+    staging:
+      +materialized: table

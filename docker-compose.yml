@@ -1,0 +1,57 @@
+# Local stack: database, API, worker, web. Start with `docker compose up --build`.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: dataforge
+      POSTGRES_PASSWORD: dataforge # local development only
+      POSTGRES_DB: dataforge
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataforge"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: api }
+    environment:
+      DATABASE_URL: postgresql+psycopg://dataforge:dataforge@postgres:5432/dataforge
+      DF_AUTH_MODE: dev
+      DF_CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      postgres: { condition: service_healthy }
+    ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/healthz')"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: worker }
+    environment:
+      DATABASE_URL: postgresql+psycopg://dataforge:dataforge@postgres:5432/dataforge
+    depends_on:
+      api: { condition: service_healthy }
+    # Learner code runs here. Keep the container small and locked.
+    read_only: true
+    tmpfs: ["/tmp:exec,size=256m"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+
+  web:
+    build:
+      context: apps/web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
