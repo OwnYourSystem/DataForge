@@ -1,0 +1,6 @@
+customer_id,customer_name,email,country
+1001,Alice Jensen,Alice@Example.com,Denmark
+1002,  Daniel Smith ,daniel@example.com,United Kingdom
+1003,Sara Nielsen, SARA@EXAMPLE.COM ,denmark
+1004,Peter Hansen,peter@example.com, Norway
+1005,Maria Lopez,Maria@example.com,SPAIN

@@ -1,0 +1,13 @@
+version: 2
+models:
+  - name: stg_customers
+    description: Cleaned customer records
+    columns:
+      - name: customer_key
+        description: Unique customer identifier
+        data_tests:
+          - unique
+          - not_null
+      - name: email
+        data_tests:
+          - not_null

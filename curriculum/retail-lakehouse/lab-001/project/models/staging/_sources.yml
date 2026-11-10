@@ -1,0 +1,6 @@
+version: 2
+sources:
+  - name: retail_raw
+    schema: main
+    tables:
+      - name: raw_customers

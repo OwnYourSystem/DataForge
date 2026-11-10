@@ -1,0 +1,20 @@
+retail_lakehouse:
+  target: learner
+  outputs:
+    # Trusted step only: loads the seed file. Runs before learner SQL.
+    seed:
+      type: duckdb
+      path: "{{ env_var('DF_DUCKDB_PATH') }}"
+      schema: main
+      threads: 1
+    # Learner SQL runs here. It must not read or write files, or load
+    # extensions. DuckDB does not let a session enable this access again.
+    learner:
+      type: duckdb
+      path: "{{ env_var('DF_DUCKDB_PATH') }}"
+      schema: main
+      threads: 1
+      settings:
+        enable_external_access: false
+        autoinstall_known_extensions: false
+        autoload_known_extensions: false
