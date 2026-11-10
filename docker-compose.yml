@@ -19,6 +19,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://dataforge:dataforge@postgres:5432/dataforge
       DF_AUTH_MODE: dev
+      DF_EXECUTION_BACKEND: ${DF_EXECUTION_BACKEND:-duckdb}
       DF_CORS_ORIGINS: http://localhost:3000
     depends_on:
       postgres: { condition: service_healthy }

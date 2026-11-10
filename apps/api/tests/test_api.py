@@ -94,3 +94,17 @@ def test_one_active_execution_for_each_user(client, alice, bob):
         f"/v1/projects/{other}/executions", json={"operation_id": "dbt_build"}, headers=bob
     )
     assert response.status_code == 202
+
+
+def test_direct_table_reads_are_rejected_on_save(client, alice):
+    project = make_project(client, alice)
+    for sql in [
+        "select * from other_catalog.df_run_abc.stg_customers",
+        "select * from information_schema.tables",
+        "select content as customer_key from read_text('/etc/hostname')",
+        "select 1 as customer_key; drop table raw_customers",
+    ]:
+        response = client.put(
+            f"/v1/projects/{project}/files/{MODEL}", json={"content": sql}, headers=alice
+        )
+        assert response.status_code == 422, sql

@@ -25,3 +25,17 @@ def execution_timeout_seconds() -> int:
 
 def cors_origins() -> list[str]:
     return os.environ.get("DF_CORS_ORIGINS", "http://localhost:3000").split(",")
+
+
+def execution_backend() -> str:
+    """`duckdb` (default, no cloud account) or `databricks`."""
+    return os.environ.get("DF_EXECUTION_BACKEND", "duckdb")
+
+
+def sweep_interval_seconds() -> int:
+    return int(os.environ.get("DF_SWEEP_INTERVAL_SECONDS", "600"))
+
+
+def backend_call_timeout_seconds() -> int:
+    """Time limit for one grading or cleanup call to the backend."""
+    return int(os.environ.get("DF_BACKEND_CALL_TIMEOUT_SECONDS", "180"))

@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   api:
-    name: API, worker and lesson (dbt on DuckDB)
+    name: API, worker and lesson (dbt on DuckDB, Databricks offline)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,7 +25,7 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: apps/api/pyproject.toml
-      - run: pip install -e ".[worker,dev]"
+      - run: pip install -e ".[worker,databricks,dev]"
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest -q

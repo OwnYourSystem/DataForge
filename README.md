@@ -6,8 +6,8 @@ a dbt model, runs it, and gets an automated grade. No local setup.
 ![The workbench after a passed run](docs/images/workbench.png)
 
 This repository holds the **fast-path vertical slice**: one lesson (LAB-001)
-that runs end to end on DuckDB, with no cloud account. Databricks comes
-later as a second execution adapter.
+that runs end to end on DuckDB, with no cloud account. The same lesson can
+run on Azure Databricks: see [docs/databricks.md](docs/databricks.md).
 
 - Original specification: [docs/spec/dataforge-v1.0-original.md](docs/spec/dataforge-v1.0-original.md)
 - Decisions that changed it: [docs/spec/fast-path.md](docs/spec/fast-path.md)
@@ -68,6 +68,7 @@ Browser (Next.js + Monaco)
 | Path | Contents |
 |---|---|
 | `apps/api/dataforge/` | API, worker, runner, grader, SQL guard |
+| `apps/api/dataforge/backends/` | Execution backends: DuckDB and Databricks |
 | `apps/web/` | Workbench UI |
 | `curriculum/retail-lakehouse/lab-001/` | Lesson manifest, instructions, trusted dbt project, starter, solution |
 | `.github/workflows/ci.yml` | Lint, tests, web build, full-stack smoke test |
@@ -77,6 +78,7 @@ Browser (Next.js + Monaco)
 - The learner sends an operation id (`dbt_build`). No learner text goes into a command.
 - The learner can write only the files in `editable_files`. `profiles.yml`, tests, and macros are trusted.
 - Learner SQL can use `source()` and `ref()` only. `env_var()` and all other Jinja are rejected.
+- A model must be one query, and it can read only `source()` and `ref()` relations.
 - dbt gets a minimal environment. Worker variables do not reach it.
 - Learner SQL runs with DuckDB file access off.
 - The grader opens the result read-only and calculates expected values itself.
@@ -85,6 +87,6 @@ Browser (Next.js + Monaco)
 ## Not done yet
 
 - **Real sign-in.** `DF_AUTH_MODE=dev` trusts the `X-Dev-User` header. Do not put this on a public host.
-- **Databricks adapter.** The lesson runs on DuckDB only.
+- **Databricks live proof.** The Databricks backend is not yet run against a real workspace.
 - **Migrations.** Tables are created at startup. Add Alembic before the schema changes.
 - Monthly quotas, Tier B (Terraform labs), SSE log streaming.

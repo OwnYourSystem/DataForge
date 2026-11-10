@@ -1,0 +1,24 @@
+# Adds the Databricks backend to the local stack. Put the DF_DBX_* values in
+# a file named `.env` (it is in .gitignore), then run:
+#   docker compose -f docker-compose.yml -f docker-compose.databricks.yml up --build
+services:
+  api:
+    environment:
+      DF_EXECUTION_BACKEND: databricks
+  worker:
+    build:
+      args:
+        WORKER_EXTRAS: worker,databricks
+    environment:
+      DF_EXECUTION_BACKEND: databricks
+      DF_EXECUTION_TIMEOUT_SECONDS: "900"
+      DF_DBX_HOST: ${DF_DBX_HOST:?set DF_DBX_HOST in .env}
+      DF_DBX_HTTP_PATH: ${DF_DBX_HTTP_PATH:?set DF_DBX_HTTP_PATH in .env}
+      DF_DBX_CATALOG: ${DF_DBX_CATALOG:?set DF_DBX_CATALOG in .env}
+      DF_DBX_CLIENT_ID: ${DF_DBX_CLIENT_ID:-}
+      DF_DBX_CLIENT_SECRET: ${DF_DBX_CLIENT_SECRET:-}
+      DF_DBX_TOKEN: ${DF_DBX_TOKEN:-}
+      DF_DBX_GRADER_CLIENT_ID: ${DF_DBX_GRADER_CLIENT_ID:-}
+      DF_DBX_GRADER_CLIENT_SECRET: ${DF_DBX_GRADER_CLIENT_SECRET:-}
+    # dbt-databricks writes a token cache in the home directory.
+    tmpfs: ["/tmp:exec,size=256m", "/home/app:size=16m,uid=10001,gid=10001"]
