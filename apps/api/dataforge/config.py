@@ -15,8 +15,24 @@ def curriculum_dir() -> Path:
 
 
 def auth_mode() -> str:
-    """`dev` trusts the X-Dev-User header. Do not use `dev` on a public host."""
+    """`jwt` verifies bearer tokens. `dev` trusts the X-Dev-User header: do not
+    use `dev` on a public host."""
     return os.environ.get("DF_AUTH_MODE", "dev")
+
+
+def auth_issuer() -> str:
+    """Token issuer. For Supabase: https://<project-ref>.supabase.co/auth/v1"""
+    return os.environ.get("DF_AUTH_ISSUER", "")
+
+
+def auth_audience() -> str:
+    """Expected audience. For Supabase: authenticated"""
+    return os.environ.get("DF_AUTH_AUDIENCE", "")
+
+
+def auth_jwks_url() -> str:
+    """Public keys of the issuer. Default: <issuer>/.well-known/jwks.json"""
+    return os.environ.get("DF_AUTH_JWKS_URL", "")
 
 
 def execution_timeout_seconds() -> int:

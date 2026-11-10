@@ -18,7 +18,12 @@ services:
     build: { context: ., dockerfile: apps/api/Dockerfile, target: api }
     environment:
       DATABASE_URL: postgresql+psycopg://dataforge:dataforge@postgres:5432/dataforge
-      DF_AUTH_MODE: dev
+      # `dev` trusts the X-Dev-User header. For real sign-in, set these in `.env`:
+      # DF_AUTH_MODE=jwt, DF_AUTH_ISSUER, DF_AUTH_AUDIENCE. See docs/auth.md.
+      DF_AUTH_MODE: ${DF_AUTH_MODE:-dev}
+      DF_AUTH_ISSUER: ${DF_AUTH_ISSUER:-}
+      DF_AUTH_AUDIENCE: ${DF_AUTH_AUDIENCE:-}
+      DF_AUTH_JWKS_URL: ${DF_AUTH_JWKS_URL:-}
       DF_EXECUTION_BACKEND: ${DF_EXECUTION_BACKEND:-duckdb}
       DF_CORS_ORIGINS: http://localhost:3000
     depends_on:
@@ -50,6 +55,8 @@ services:
       context: apps/web
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}
     depends_on:
       api: { condition: service_healthy }
     ports: ["3000:3000"]

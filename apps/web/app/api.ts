@@ -1,3 +1,5 @@
+import type { Identity } from "./auth";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type Check = { id: string; title: string; weight: number; passed: boolean; critical: boolean };
@@ -25,10 +27,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(user: string, path: string, init: RequestInit = {}): Promise<T> {
+export async function api<T>(identity: Identity, path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", "X-Dev-User": user, ...init.headers },
+    headers: { "Content-Type": "application/json", ...(await identity.headers()), ...init.headers },
   });
   if (!response.ok) {
     let detail = response.statusText;

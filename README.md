@@ -75,6 +75,7 @@ Browser (Next.js + Monaco)
 
 ## Security rules in this slice
 
+- With `DF_AUTH_MODE=jwt`, the API accepts only tokens that the identity provider signed (asymmetric keys, issuer, audience, and expiry are checked).
 - The learner sends an operation id (`dbt_build`). No learner text goes into a command.
 - The learner can write only the files in `editable_files`. `profiles.yml`, tests, and macros are trusted.
 - Learner SQL can use `source()` and `ref()` only. `env_var()` and all other Jinja are rejected.
@@ -86,7 +87,7 @@ Browser (Next.js + Monaco)
 
 ## Not done yet
 
-- **Real sign-in.** `DF_AUTH_MODE=dev` trusts the `X-Dev-User` header. Do not put this on a public host.
+- **Sign-in live proof.** Token sign-in is in the code (see [docs/auth.md](docs/auth.md)), but it is not yet run against a real Supabase project. Without configuration, the stack uses the development sign-in: do not put that on a public host.
 - **Databricks live proof.** The Databricks backend is not yet run against a real workspace.
 - **Migrations.** Tables are created at startup. Add Alembic before the schema changes.
 - Monthly quotas, Tier B (Terraform labs), SSE log streaming.

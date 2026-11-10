@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import backends, config, curriculum
-from .auth import identity_subject
+from .auth import check_startup_config, identity_subject
 from .db import (
     Execution,
     LessonProgress,
@@ -36,6 +36,7 @@ class CreateExecution(BaseModel):
 
 
 def create_app(engine=None, lessons=None, dialect: str | None = None) -> FastAPI:
+    check_startup_config()
     engine = engine or make_engine()
     create_schema(engine)
     session_factory = make_session_factory(engine)
@@ -47,8 +48,8 @@ def create_app(engine=None, lessons=None, dialect: str | None = None) -> FastAPI
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors_origins(),
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT"],
+        allow_headers=["Authorization", "Content-Type", "X-Dev-User"],
     )
     app.state.session_factory = session_factory
 

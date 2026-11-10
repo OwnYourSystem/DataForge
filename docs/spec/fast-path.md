@@ -44,7 +44,8 @@ commit. The original specification stays in this directory for reference.
 
 ## Next steps
 
-1. Sign-in with a hosted provider (a second `DF_AUTH_MODE`).
+1. Sign-in: `DF_AUTH_MODE=jwt` with Supabase Auth is in the code. Connect a
+   real project: see [../auth.md](../auth.md).
 2. Databricks backend: the code is in `dataforge/backends/databricks.py`.
    Run the live test in [../databricks.md](../databricks.md) against a real
    workspace.
