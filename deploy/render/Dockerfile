@@ -1,7 +1,8 @@
-# Web app and API in one container, for hosts where one public service is
-# simplest (Render). The web server is the only public port. It forwards
-# /api to the API on localhost. dbt is NOT in this image: the worker is a
-# separate service (apps/api/Dockerfile).
+# Free single-container test deployment: web app, API, and worker in one
+# container. dbt IS in this image, so learner SQL runs in the same container
+# as the API. Use it only for a test with learners you trust.
+# For the split layout (worker in its own service), use split.Dockerfile and
+# blueprint-split.yaml in this directory.
 # Build context: the repository root.
 FROM node:22-slim AS web
 WORKDIR /app
@@ -18,7 +19,7 @@ COPY --from=web /usr/local/bin/node /usr/local/bin/node
 WORKDIR /srv/apps/api
 COPY apps/api/pyproject.toml ./
 COPY apps/api/dataforge ./dataforge
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[worker]"
 # .dockerignore keeps the reference solutions out of the image.
 COPY curriculum /srv/curriculum
 ENV DF_CURRICULUM_DIR=/srv/curriculum
@@ -29,6 +30,8 @@ COPY --from=web /app/.next/static ./.next/static
 COPY deploy/render/start.sh /srv/start.sh
 
 USER 10001:10001
-ENV API_INTERNAL_URL=http://127.0.0.1:8000 HOSTNAME=0.0.0.0
+# The free plan has 512 MB. Keep the web server small so that dbt has room.
+ENV API_INTERNAL_URL=http://127.0.0.1:8000 HOSTNAME=0.0.0.0 \
+    DF_RUN_WORKER=1 NODE_OPTIONS=--max-old-space-size=160
 EXPOSE 3000
 CMD ["bash", "/srv/start.sh"]

@@ -1,4 +1,5 @@
-# Render blueprint for a test deployment of DataForge.
+# Render blueprint for a free test deployment of DataForge: one container
+# (web app, API, and worker) and a free database. For learners you trust only.
 # See docs/deploy.md. Sign-in is real (Supabase): this file must not set
 # DF_AUTH_MODE=dev, because the address is public.
 databases:
@@ -8,7 +9,7 @@ databases:
     postgresMajorVersion: "16"
 
 services:
-  # Web app + API. The only public address.
+  # Web app, API, and worker. The only public address.
   - type: web
     name: dataforge
     runtime: docker
@@ -31,18 +32,3 @@ services:
         value: https://moozebxwxsxpjfqbipov.supabase.co
       - key: SUPABASE_PUBLISHABLE_KEY
         value: sb_publishable_NyoF1OlMT0vaM5RwfhnBCg_Mc_EGUYs
-
-  # Runs dbt for learner code. No public address.
-  - type: worker
-    name: dataforge-worker
-    runtime: docker
-    plan: starter
-    region: frankfurt
-    dockerfilePath: ./apps/api/Dockerfile
-    dockerContext: .
-    autoDeploy: true
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase: { name: dataforge-db, property: connectionString }
-      - key: DF_EXECUTION_BACKEND
-        value: duckdb

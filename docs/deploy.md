@@ -1,15 +1,18 @@
 # Test deployment on Render
 
-`render.yaml` describes a small deployment for tests on a phone or with a
-small number of invited learners.
+`render.yaml` describes a free deployment for a test on a phone.
 
 | Part | Render type | Plan | Notes |
 |---|---|---|---|
-| `dataforge` | Web service | Free | Web app and API in one container. The only public address. |
-| `dataforge-worker` | Background worker | Starter (about 7 USD each month) | Runs dbt. No public address. |
+| `dataforge` | Web service | Free | Web app, API, and worker in one container. The only public address. |
 | `dataforge-db` | Postgres | Free | Render deletes a free database after 30 days. |
 
 Sign-in is real (Supabase Auth). The development sign-in is off.
+
+**This layout is for learners you trust.** dbt and learner SQL run in the
+same container as the API, which holds the database address. The SQL guard,
+the DuckDB file lock, and the minimal dbt environment stay. Before other
+people sign in, change to the split layout (see the end of this page).
 
 ## Deploy
 
@@ -34,22 +37,21 @@ made from.
 ```text
 Phone browser
   └── dataforge (public): web server
-        └── /api/v1/... forwarded to the API on localhost, same container
-              └── dataforge-db (Postgres, private network)
-                    └── dataforge-worker: runs dbt, grades, no public address
+        ├── /api/v1/... forwarded to the API on localhost, same container
+        ├── worker: runs dbt and grades, same container
+        └── dataforge-db (Postgres, private network)
 ```
 
-The public container has no dbt and no reference solutions. CI builds both
-images, runs the lesson through the public port, and checks these two
-points.
+CI builds this image, runs the lesson 2 times through the public port with
+a memory limit of 512 MB, and checks that the image has no reference
+solutions.
 
 ## Limits of this deployment
 
 - **Slow first request.** A free web service stops after 15 minutes with no
   traffic. The next request takes approximately 1 minute.
-- **Worker isolation is weaker than in Docker Compose.** Render does not
-  give a read-only file system or dropped capabilities for the worker. The
-  SQL guard, the DuckDB file lock, and the minimal environment stay.
+- **Memory.** A free service has 512 MB. One run uses most of it. Two runs
+  at the same time are not possible.
 - **One worker.** Runs go one at a time.
 - **Email volume.** The built-in Supabase email service sends only a small
   number of emails each hour.
@@ -57,3 +59,12 @@ points.
   test.
 - **Free database.** It ends after 30 days. Change the plan in `render.yaml`
   before that if you want to keep the data.
+
+## Split layout (paid)
+
+`deploy/render/blueprint-split.yaml` puts the worker in its own service
+with no public address. The public container then has no dbt. It needs a
+payment method in Render (Starter plan for the worker, approximately 7 USD
+each month). To use it, copy that file to `render.yaml` in the repository
+root and push.
+

@@ -1,6 +1,6 @@
-# The Render layout, for CI: database, the combined web + API image, and the
+# The split Render layout, for CI: database, the combined web + API image, and the
 # worker. It mirrors render.yaml, but with the development sign-in so that the
-# smoke test can run. Do not use this file for a public deployment.
+# smoke test can run. docker-compose.single.yml tests the single container. Do not use this file for a public deployment.
 services:
   postgres:
     image: postgres:16
@@ -15,7 +15,7 @@ services:
       retries: 20
 
   app:
-    build: { context: ../.., dockerfile: deploy/render/Dockerfile }
+    build: { context: ../.., dockerfile: deploy/render/split.Dockerfile }
     environment:
       # The plain form that Render gives. The API adds the driver name.
       DATABASE_URL: postgresql://dataforge:dataforge@postgres:5432/dataforge
