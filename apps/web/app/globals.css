@@ -105,3 +105,4 @@ pre { background: var(--code-bg); padding: 12px; border-radius: 6px; overflow: a
   .topbar { flex-wrap: wrap; row-gap: 6px; }
   .lesson-title { flex-basis: 100%; order: 9; }
 }
+.topbar .user { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

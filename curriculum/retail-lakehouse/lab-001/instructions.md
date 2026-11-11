@@ -21,6 +21,7 @@ Read the data with `{{ source('retail_raw', 'raw_customers') }}`.
 
 ## Rules
 
-- You can use `source()` and `ref()` only. Other Jinja is rejected.
+- Write one `select` query. Read tables with `source()` or `ref()` only.
+- Other Jinja is rejected.
 - Select **Build and test** to run the model and the tests.
 - You pass at a score of 80 or more, with all critical checks passed.

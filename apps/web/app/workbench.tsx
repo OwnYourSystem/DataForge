@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api, ApiError, type Execution, type Lesson, type Project, type ProjectFile } from "./api";
+import type { Identity } from "./auth";
 
 type SaveState = "saved" | "saving" | "unsaved" | "error";
 
@@ -23,8 +24,10 @@ const STATUS_LABEL: Record<Execution["status"], string> = {
   timed_out: "Stopped at the time limit",
 };
 
-export default function Workbench(props: { user: string; lessonId: string; onSignOut: () => void }) {
-  const { user, lessonId, onSignOut } = props;
+export default function Workbench(props: { identity: Identity; lessonId: string }) {
+  const { identity, lessonId } = props;
+  const user = identity;
+  const onSignOut = () => void identity.signOut();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [file, setFile] = useState<ProjectFile | null>(null);
@@ -168,7 +171,7 @@ export default function Workbench(props: { user: string; lessonId: string; onSig
         <span className="spacer" />
         {project.completed_at ? <span className="badge pass">Completed</span> : null}
         <span className="muted">Best score: {project.best_score}</span>
-        <span className="muted">{user}</span>
+        <span className="muted user">{identity.label}</span>
         <button onClick={onSignOut}>Sign out</button>
       </header>
 

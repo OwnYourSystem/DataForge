@@ -10,7 +10,7 @@ seeds:
   retail_lakehouse:
     raw_customers:
       +column_types:
-        customer_id: varchar
+        customer_id: string
 models:
   retail_lakehouse:
     staging:

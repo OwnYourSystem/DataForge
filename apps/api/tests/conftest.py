@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from dataforge import curriculum
+from dataforge.backends.duckdb import DuckDBBackend
 from dataforge.db import make_engine
 from dataforge.main import create_app
 
@@ -37,3 +38,8 @@ def bob():
 @pytest.fixture()
 def solution(lessons):
     return (lessons[LESSON].root / "solution" / MODEL).read_text()
+
+
+@pytest.fixture()
+def backend():
+    return DuckDBBackend()

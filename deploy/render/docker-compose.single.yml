@@ -1,0 +1,33 @@
+# The free single-container Render layout, for CI: database and one container
+# with the web app, the API, and the worker. It mirrors render.yaml, but with
+# the development sign-in so that the smoke test can run.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: dataforge
+      POSTGRES_PASSWORD: dataforge
+      POSTGRES_DB: dataforge
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataforge"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: { context: ../.., dockerfile: deploy/render/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://dataforge:dataforge@postgres:5432/dataforge
+      DF_AUTH_MODE: dev
+      PORT: "10000"
+    depends_on:
+      postgres: { condition: service_healthy }
+    ports: ["10000:10000"]
+    # The same memory limit as a free Render service.
+    mem_limit: 512m
+    memswap_limit: 512m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:10000/')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
