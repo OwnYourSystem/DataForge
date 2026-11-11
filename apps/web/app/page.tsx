@@ -1,18 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { devIdentity, supabase, supabaseIdentity, type Identity } from "./auth";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { devIdentity, getSupabase, supabaseIdentity, type Identity } from "./auth";
 import Workbench from "./workbench";
 
 const LESSON_ID = "lab-001";
 const USER_KEY = "dataforge.devUser";
 
 export default function Home() {
-  return supabase ? <SupabaseHome /> : <DevHome />;
+  // The sign-in mode comes from the page config, which exists in the browser only.
+  const [client, setClient] = useState<SupabaseClient | null | undefined>(undefined);
+  useEffect(() => setClient(getSupabase()), []);
+  if (client === undefined) return null;
+  return client ? <SupabaseHome client={client} /> : <DevHome />;
 }
 
-function SupabaseHome() {
-  const client = supabase!;
+function SupabaseHome({ client }: { client: SupabaseClient }) {
   const [email, setEmail] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -31,12 +35,11 @@ function SupabaseHome() {
   );
 
   if (!ready) return null;
-  if (!identity) return <EmailSignIn />;
+  if (!identity) return <EmailSignIn client={client} />;
   return <Workbench identity={identity} lessonId={LESSON_ID} />;
 }
 
-function EmailSignIn() {
-  const client = supabase!;
+function EmailSignIn({ client }: { client: SupabaseClient }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);

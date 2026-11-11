@@ -1,0 +1,40 @@
+# The Render layout, for CI: database, the combined web + API image, and the
+# worker. It mirrors render.yaml, but with the development sign-in so that the
+# smoke test can run. Do not use this file for a public deployment.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: dataforge
+      POSTGRES_PASSWORD: dataforge
+      POSTGRES_DB: dataforge
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataforge"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: { context: ../.., dockerfile: deploy/render/Dockerfile }
+    environment:
+      # The plain form that Render gives. The API adds the driver name.
+      DATABASE_URL: postgresql://dataforge:dataforge@postgres:5432/dataforge
+      DF_AUTH_MODE: ${DF_AUTH_MODE:-dev}
+      DF_AUTH_ISSUER: ${DF_AUTH_ISSUER:-}
+      DF_AUTH_AUDIENCE: ${DF_AUTH_AUDIENCE:-}
+      PORT: "10000"
+    depends_on:
+      postgres: { condition: service_healthy }
+    ports: ["10000:10000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:10000/')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  worker:
+    build: { context: ../.., dockerfile: apps/api/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://dataforge:dataforge@postgres:5432/dataforge
+    depends_on:
+      app: { condition: service_healthy }

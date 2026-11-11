@@ -47,8 +47,8 @@ email address and no password. To change the provider later, change the 3
 | `DF_AUTH_MODE` | `jwt` |
 | `DF_AUTH_ISSUER` | `https://<project-ref>.supabase.co/auth/v1` |
 | `DF_AUTH_AUDIENCE` | `authenticated` |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The publishable key (`sb_publishable_...`) |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | The publishable key (`sb_publishable_...`) |
 
 The publishable key is public by design. Do not put a secret key
 (`sb_secret_...`) in the web app or in this repository.
@@ -62,8 +62,8 @@ The publishable key is public by design. Do not put a secret key
 docker compose up --build
 ```
 
-The web values are read at build time, so `--build` is necessary after a
-change.
+The web app reads its values when it starts, so a change needs a restart
+and no new build.
 
 ## Limits
 

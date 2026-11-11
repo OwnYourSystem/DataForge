@@ -64,3 +64,38 @@ jobs:
         run: docker compose logs --no-color --tail 200
       - if: always()
         run: docker compose down --volumes
+
+  render:
+    name: Render deployment images (web + API, worker)
+    runs-on: ubuntu-latest
+    needs: [api, web]
+    env:
+      COMPOSE_FILE: deploy/render/docker-compose.ci.yml
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up --build --detach --wait
+      - name: Lesson runs through the public port
+        run: scripts/smoke.sh http://localhost:10000/api
+      - name: Only the versioned API is reachable through the web server
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/api/healthz)" = 404
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/api/docs)" = 404
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/api/v1/lessons)" = 401
+      - name: The public image has no dbt and no reference solutions
+        run: |
+          if docker compose exec -T app sh -c 'command -v dbt || pip show dbt-core 2>/dev/null | grep .'; then
+            echo "dbt found in the public image"; exit 1
+          fi
+          if docker compose exec -T app sh -c 'find /srv/curriculum -path "*solution*" | grep .'; then
+            echo "reference solution found in the public image"; exit 1
+          fi
+      - name: Token mode refuses the development header
+        run: |
+          DF_AUTH_MODE=jwt DF_AUTH_ISSUER=https://example.supabase.co/auth/v1 DF_AUTH_AUDIENCE=authenticated \
+            docker compose up --detach --wait app
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'X-Dev-User: alice' http://localhost:10000/api/v1/me)" = 401
+      - if: failure()
+        run: docker compose logs --no-color --tail 200
+      - if: always()
+        run: docker compose down --volumes
+

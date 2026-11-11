@@ -20,6 +20,10 @@ docker compose up --build
 
 Open http://localhost:3000, type a name, and select **Build and test**.
 
+## Deploy it
+
+A test deployment on Render: see [docs/deploy.md](docs/deploy.md).
+
 ## Run it without Docker
 
 ```bash

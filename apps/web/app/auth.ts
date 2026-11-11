@@ -1,11 +1,26 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+type PublicConfig = { supabaseUrl: string; supabasePublishableKey: string };
 
-/** Real sign-in is on when the Supabase values are set at build time. */
-export const supabase: SupabaseClient | null =
-  SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+declare global {
+  interface Window {
+    __DATAFORGE__?: PublicConfig;
+  }
+}
+
+let client: SupabaseClient | null | undefined;
+
+/** The Supabase client, or null when real sign-in is not configured. Browser only. */
+export function getSupabase(): SupabaseClient | null {
+  if (client === undefined) {
+    const config = window.__DATAFORGE__;
+    client =
+      config?.supabaseUrl && config.supabasePublishableKey
+        ? createClient(config.supabaseUrl, config.supabasePublishableKey)
+        : null;
+  }
+  return client;
+}
 
 /** A signed-in learner. The API client asks it for request headers. */
 export type Identity = {

@@ -1,6 +1,7 @@
 import type { Identity } from "./auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Same origin: app/api/[...path]/route.ts forwards to the API.
+const API_URL = "/api";
 
 export type Check = { id: string; title: string; weight: number; passed: boolean; critical: boolean };
 export type Assessment = { passed: boolean; score: number; checks: Check[] };

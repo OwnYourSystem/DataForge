@@ -7,7 +7,13 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def database_url() -> str:
-    return os.environ.get("DATABASE_URL", "sqlite:///./dataforge.db")
+    url = os.environ.get("DATABASE_URL", "sqlite:///./dataforge.db")
+    # Hosts such as Render give `postgres://` or `postgresql://`. SQLAlchemy
+    # needs the driver name, and this project uses psycopg 3.
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
+    return url
 
 
 def curriculum_dir() -> Path:
@@ -40,7 +46,9 @@ def execution_timeout_seconds() -> int:
 
 
 def cors_origins() -> list[str]:
-    return os.environ.get("DF_CORS_ORIGINS", "http://localhost:3000").split(",")
+    """Origins that can call the API from a browser. Empty by default: the web
+    app calls the API through its own server, so no browser origin needs access."""
+    return [o for o in os.environ.get("DF_CORS_ORIGINS", "").split(",") if o]
 
 
 def execution_backend() -> str:

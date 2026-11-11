@@ -108,3 +108,15 @@ def test_direct_table_reads_are_rejected_on_save(client, alice):
             f"/v1/projects/{project}/files/{MODEL}", json={"content": sql}, headers=alice
         )
         assert response.status_code == 422, sql
+
+
+def test_database_url_gets_the_psycopg_driver(monkeypatch):
+    from dataforge import config
+
+    for given in ("postgres://u:p@h:5432/d", "postgresql://u:p@h:5432/d"):
+        monkeypatch.setenv("DATABASE_URL", given)
+        assert config.database_url() == "postgresql+psycopg://u:p@h:5432/d"
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@h/d")
+    assert config.database_url() == "postgresql+psycopg://u:p@h/d"
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///x.db")
+    assert config.database_url() == "sqlite:///x.db"

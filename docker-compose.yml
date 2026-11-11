@@ -25,7 +25,6 @@ services:
       DF_AUTH_AUDIENCE: ${DF_AUTH_AUDIENCE:-}
       DF_AUTH_JWKS_URL: ${DF_AUTH_JWKS_URL:-}
       DF_EXECUTION_BACKEND: ${DF_EXECUTION_BACKEND:-duckdb}
-      DF_CORS_ORIGINS: http://localhost:3000
     depends_on:
       postgres: { condition: service_healthy }
     ports: ["8000:8000"]
@@ -51,12 +50,13 @@ services:
     pids_limit: 256
 
   web:
-    build:
-      context: apps/web
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
-        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}
+    build: { context: apps/web }
+    environment:
+      # The browser calls /api on the web server, which forwards to the API.
+      API_INTERNAL_URL: http://api:8000
+      # Set both to turn on Supabase sign-in. Empty: development sign-in.
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
     depends_on:
       api: { condition: service_healthy }
     ports: ["3000:3000"]
