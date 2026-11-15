@@ -18,8 +18,13 @@ services:
     build: { context: ., dockerfile: apps/api/Dockerfile, target: api }
     environment:
       DATABASE_URL: postgresql+psycopg://dataforge:dataforge@postgres:5432/dataforge
-      DF_AUTH_MODE: dev
-      DF_CORS_ORIGINS: http://localhost:3000
+      # `dev` trusts the X-Dev-User header. For real sign-in, set these in `.env`:
+      # DF_AUTH_MODE=jwt, DF_AUTH_ISSUER, DF_AUTH_AUDIENCE. See docs/auth.md.
+      DF_AUTH_MODE: ${DF_AUTH_MODE:-dev}
+      DF_AUTH_ISSUER: ${DF_AUTH_ISSUER:-}
+      DF_AUTH_AUDIENCE: ${DF_AUTH_AUDIENCE:-}
+      DF_AUTH_JWKS_URL: ${DF_AUTH_JWKS_URL:-}
+      DF_EXECUTION_BACKEND: ${DF_EXECUTION_BACKEND:-duckdb}
     depends_on:
       postgres: { condition: service_healthy }
     ports: ["8000:8000"]
@@ -45,10 +50,13 @@ services:
     pids_limit: 256
 
   web:
-    build:
-      context: apps/web
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+    build: { context: apps/web }
+    environment:
+      # The browser calls /api on the web server, which forwards to the API.
+      API_INTERNAL_URL: http://api:8000
+      # Set both to turn on Supabase sign-in. Empty: development sign-in.
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
     depends_on:
       api: { condition: service_healthy }
     ports: ["3000:3000"]

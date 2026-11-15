@@ -6,12 +6,13 @@ database read-only and compares the table with values it calculates itself.
 
 import csv
 import json
+import logging
 from pathlib import Path
 
-import duckdb
-
+from .backends import Backend, RunContext
 from .curriculum import Lesson
-from .runner import DUCKDB_FILE
+
+log = logging.getLogger("dataforge.grader")
 
 
 def _check(check_id: str, title: str, weight: int, passed: bool, critical: bool = False) -> dict:
@@ -31,7 +32,8 @@ def _read_json(path: Path) -> dict:
         return {}
 
 
-def grade_lab_001(lesson: Lesson, workspace: Path) -> list[dict]:
+def grade_lab_001(lesson: Lesson, backend: Backend, ctx: RunContext) -> list[dict]:
+    workspace = ctx.workspace
     model_id = "model.retail_lakehouse.stg_customers"
     manifest = _read_json(workspace / "target" / "manifest.json")
     run_results = _read_json(workspace / "target" / "run_results.json")
@@ -57,25 +59,30 @@ def grade_lab_001(lesson: Lesson, workspace: Path) -> list[dict]:
 
     columns: list[tuple[str, str]] = []
     rows: list[tuple] = []
-    counts = (0, 0, 0)
+    counts: tuple = (0, 0, 0)
+    table = backend.relation(ctx, "stg_customers")
     try:
-        con = duckdb.connect(str(workspace / DUCKDB_FILE), read_only=True)
-        try:
-            columns = [(r[0], r[1]) for r in con.execute("describe main.stg_customers").fetchall()]
-            counts = con.execute(
-                "select count(*), count(distinct customer_key), "
-                "count(*) filter (where customer_key is null) from main.stg_customers"
-            ).fetchone()
+        with backend.grader_query(ctx) as query:
+            columns = backend.columns(query, ctx, "stg_customers")
+            counts = tuple(
+                query(
+                    "select count(*), count(distinct customer_key), "
+                    f"sum(case when customer_key is null then 1 else 0 end) from {table}"
+                )[0]
+            )
             rows = sorted(
-                con.execute(
-                    "select customer_key, customer_name, email, country from main.stg_customers"
-                ).fetchall(),
+                (
+                    tuple(r)
+                    for r in query(
+                        f"select customer_key, customer_name, email, country from {table}"
+                    )
+                ),
                 key=repr,
             )
-        finally:
-            con.close()
-    except duckdb.Error:
-        pass  # The table or a column is missing. The checks below fail.
+    except Exception as exc:
+        # The table or a column is missing, or the engine is not available.
+        # The checks below fail. The detail goes to the worker log only.
+        log.info("grader query failed: %s", type(exc).__name__)
 
     names = [c[0] for c in columns]
     types = dict(columns)
@@ -107,8 +114,8 @@ def grade_lab_001(lesson: Lesson, workspace: Path) -> list[dict]:
 GRADERS = {"lab-001": grade_lab_001}
 
 
-def grade(lesson: Lesson, workspace: Path) -> dict:
-    checks = GRADERS[lesson.id](lesson, workspace)
+def grade(lesson: Lesson, backend: Backend, ctx: RunContext) -> dict:
+    checks = GRADERS[lesson.id](lesson, backend, ctx)
     score = sum(c["weight"] for c in checks if c["passed"])
     rules = lesson.manifest["validation"]
     critical_ok = all(c["passed"] for c in checks if c["critical"])

@@ -18,6 +18,8 @@ CMD ["uvicorn", "dataforge.main:app_factory", "--factory", "--host", "0.0.0.0", 
 
 # Execution plane. Runs dbt for learner code. It has no HTTP port.
 FROM base AS worker
-RUN pip install --no-cache-dir ".[worker]"
+# Use WORKER_EXTRAS=worker,databricks for the Databricks backend.
+ARG WORKER_EXTRAS=worker
+RUN pip install --no-cache-dir ".[${WORKER_EXTRAS}]"
 USER 10001:10001
 CMD ["python", "-m", "dataforge.worker"]

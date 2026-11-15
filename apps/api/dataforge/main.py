@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import config, curriculum
-from .auth import identity_subject
+from . import backends, config, curriculum
+from .auth import check_startup_config, identity_subject
 from .db import (
     Execution,
     LessonProgress,
@@ -35,18 +35,21 @@ class CreateExecution(BaseModel):
     operation_id: str
 
 
-def create_app(engine=None, lessons=None) -> FastAPI:
+def create_app(engine=None, lessons=None, dialect: str | None = None) -> FastAPI:
+    check_startup_config()
     engine = engine or make_engine()
     create_schema(engine)
     session_factory = make_session_factory(engine)
     lessons = lessons if lessons is not None else curriculum.load_lessons()
+    # The API needs the SQL dialect for the guard. It does not load the backend.
+    dialect = backends.dialect(dialect)
 
     app = FastAPI(title="DataForge API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors_origins(),
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT"],
+        allow_headers=["Authorization", "Content-Type", "X-Dev-User"],
     )
     app.state.session_factory = session_factory
 
@@ -178,7 +181,7 @@ def create_app(engine=None, lessons=None) -> FastAPI:
         if path not in lessons[project.lesson_id].editable_files:
             raise HTTPException(403, "You cannot change this file.")
         try:
-            check_learner_sql(body.content)
+            check_learner_sql(body.content, dialect)
         except GuardError as exc:
             raise HTTPException(422, str(exc)) from exc
         file = session.get(ProjectFile, (project.id, path))

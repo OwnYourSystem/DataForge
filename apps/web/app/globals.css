@@ -105,3 +105,7 @@ pre { background: var(--code-bg); padding: 12px; border-radius: 6px; overflow: a
   .topbar { flex-wrap: wrap; row-gap: 6px; }
   .lesson-title { flex-basis: 100%; order: 9; }
 }
+.topbar .user { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.signin .code-input { font: 600 22px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.3em; text-align: center; }
+/* 16px stops the zoom that iOS does on a focused field with small text. */
+@media (max-width: 820px) { .signin input { font-size: 16px; } .signin .code-input { font-size: 22px; } }

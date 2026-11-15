@@ -1,0 +1,49 @@
+# Render blueprint with the worker in its own service (paid plan).
+# To use it, copy this file to render.yaml in the repository root.
+# See docs/deploy.md. Sign-in is real (Supabase): this file must not set
+# DF_AUTH_MODE=dev, because the address is public.
+databases:
+  - name: dataforge-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: "16"
+
+services:
+  # Web app + API. The only public address.
+  - type: web
+    name: dataforge
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./deploy/render/split.Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: dataforge-db, property: connectionString }
+      - key: DF_AUTH_MODE
+        value: jwt
+      - key: DF_AUTH_ISSUER
+        value: https://moozebxwxsxpjfqbipov.supabase.co/auth/v1
+      - key: DF_AUTH_AUDIENCE
+        value: authenticated
+      - key: SUPABASE_URL
+        value: https://moozebxwxsxpjfqbipov.supabase.co
+      - key: SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_NyoF1OlMT0vaM5RwfhnBCg_Mc_EGUYs
+
+  # Runs dbt for learner code. No public address.
+  - type: worker
+    name: dataforge-worker
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: dataforge-db, property: connectionString }
+      - key: DF_EXECUTION_BACKEND
+        value: duckdb
