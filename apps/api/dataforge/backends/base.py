@@ -38,8 +38,11 @@ class Backend(ABC):
         """dbt outputs, by target name. Secrets must be `env_var()` references."""
 
     @abstractmethod
-    def env(self, ctx: RunContext) -> dict[str, str]:
-        """Environment variables that dbt needs for this backend."""
+    def env(self, ctx: RunContext, target: str) -> dict[str, str]:
+        """Environment variables that dbt needs for one target (one step)."""
+
+    def prepare(self, ctx: RunContext) -> None:  # noqa: B027 - optional hook
+        """Make what the run needs outside the workspace, before dbt starts."""
 
     def secrets(self) -> list[str]:
         """Values that must not show in learner logs."""

@@ -1,0 +1,4 @@
+# Copy to backend.hcl and put in the values from infra/bootstrap/azure-state.
+resource_group_name  = "rg-dataforge-tfstate"
+storage_account_name = "stdataforgetfxxxxxx"
+container_name       = "tfstate"

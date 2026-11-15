@@ -76,6 +76,8 @@ Browser (Next.js + Monaco)
 | `apps/api/dataforge/backends/` | Execution backends: DuckDB and Databricks |
 | `apps/web/` | Workbench UI |
 | `curriculum/retail-lakehouse/lab-001/` | Lesson manifest, instructions, trusted dbt project, starter, solution |
+| `infra/` | Terraform for the lab platform on Azure Databricks |
+| `docs/adr/`, `docs/threat-model.md` | Decisions and the threat model |
 | `.github/workflows/ci.yml` | Lint, tests, web build, full-stack smoke test |
 
 ## Security rules in this slice

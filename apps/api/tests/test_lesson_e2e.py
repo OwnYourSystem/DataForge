@@ -192,3 +192,20 @@ def test_a_backend_that_does_not_answer_cannot_stop_the_worker(
     assert result["status"] == "failed"
     assert result["assessment"] is None
     assert "grader did not answer" in result["logs"]
+
+
+def test_backend_prepare_runs_before_dbt(client, app, lessons, alice, solution):
+    class Spy(DuckDBBackend):
+        calls: list[str] = []
+
+        def prepare(self, ctx):
+            self.calls.append("prepare")
+
+        def env(self, ctx, target):
+            self.calls.append(f"dbt:{target}")
+            return super().env(ctx, target)
+
+    spy = Spy()
+    _, result = run(client, app, lessons, alice, solution, spy)
+    assert result["assessment"]["score"] == 100
+    assert spy.calls == ["prepare", "dbt:seed", "dbt:learner"]

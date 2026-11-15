@@ -49,11 +49,28 @@ def prepare_workspace(
         target = workspace / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(files[path])
-    project = yaml.safe_load((workspace / "dbt_project.yml").read_text())
-    profile = {
-        project["profile"]: {"target": backend.build_target, "outputs": backend.profile(ctx)}
+    project_path = workspace / "dbt_project.yml"
+    project = yaml.safe_load(project_path.read_text())
+    # Each query carries the execution id, so that cost and duration in the
+    # engine's query history can be joined to one run.
+    project["query-comment"] = {
+        "comment": f"dataforge_execution={ctx.execution_id}",
+        "append": True,
     }
-    (workspace / "profiles.yml").write_text(yaml.safe_dump(profile, sort_keys=False))
+    project_path.write_text(yaml.safe_dump(project, sort_keys=False))
+    _write_profile(backend, ctx, backend.build_target)
+
+
+def _write_profile(backend: Backend, ctx: RunContext, target: str) -> None:
+    """Write a profile with one target only: the target of the next step.
+
+    A step then cannot use the credential of a different step.
+    """
+    project = yaml.safe_load((ctx.workspace / "dbt_project.yml").read_text())
+    profile = {
+        project["profile"]: {"target": target, "outputs": {target: backend.profile(ctx)[target]}}
+    }
+    (ctx.workspace / "profiles.yml").write_text(yaml.safe_dump(profile, sort_keys=False))
 
 
 def _sanitize(text: str, workspace: Path, secrets: list[str]) -> str:
@@ -70,21 +87,21 @@ def dbt_build(backend: Backend, ctx: RunContext, timeout_seconds: int) -> RunRes
     dbt = _dbt_executable()
     workspace = ctx.workspace
     # A minimal environment. The worker's own variables do not go to dbt.
-    env = {
+    base_env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "HOME": str(workspace),
         "DO_NOT_TRACK": "1",
-        **backend.env(ctx),
     }
     for name in ("HTTPS_PROXY", "https_proxy", "NO_PROXY", "no_proxy", "SSL_CERT_FILE",
                  "REQUESTS_CA_BUNDLE"):  # fmt: skip
         if name in os.environ:
-            env[name] = os.environ[name]
+            base_env[name] = os.environ[name]
     common = ["--profiles-dir", ".", "--no-use-colors", "--no-version-check"]
+    # (target, arguments). The seed step is trusted. The build step runs learner SQL.
     steps = [
-        [dbt, "seed", "--target", backend.seed_target, *common],
-        [dbt, "build", "--exclude-resource-type", "seed", "--target", backend.build_target,
-         *common],
+        (backend.seed_target, [dbt, "seed", "--target", backend.seed_target, *common]),
+        (backend.build_target, [dbt, "build", "--exclude-resource-type", "seed", "--target",
+                                backend.build_target, *common]),
     ]  # fmt: skip
     secrets = backend.secrets()
     deadline = time.monotonic() + timeout_seconds
@@ -93,12 +110,14 @@ def dbt_build(backend: Backend, ctx: RunContext, timeout_seconds: int) -> RunRes
     def result(status: str) -> RunResult:
         return RunResult(status, _sanitize("".join(logs), workspace, secrets))
 
-    for argv in steps:
+    for target, argv in steps:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             logs.append("\n[stopped: time limit]\n")
             return result("timed_out")
         logs.append(f"$ dbt {argv[1]}\n")
+        _write_profile(backend, ctx, target)
+        env = {**base_env, **backend.env(ctx, target)}
         try:
             done = subprocess.run(
                 argv,

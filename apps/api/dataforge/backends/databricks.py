@@ -1,15 +1,15 @@
 """Azure Databricks backend: a shared SQL warehouse and Unity Catalog.
 
-Isolation model for the pilot:
+Two service principals, with different rights (see docs/adr/004-run-isolation.md):
 
-- Each execution gets a new schema with a random name. The worker drops it
-  after grading. A sweep drops schemas that a stopped worker left.
-- The learner SQL guard permits only relations from `source()` and `ref()`,
-  so a model cannot name the schema of a different run.
-- The service principal has rights in the lab catalog only.
+- The platform principal is trusted. It makes the schema of a run, loads the
+  lesson data, gives the learner principal rights on that schema, reads the
+  result for the grader, and drops the schema.
+- The learner principal is not trusted. It runs the learner model. It has
+  rights on the schema of the current run only. It cannot make a schema.
 
-One service principal runs all learner SQL. For a public launch, use one
-principal for each learner. See docs/databricks.md.
+One worker has one learner principal. To run more than one execution at the
+same time, give each worker its own learner principal.
 """
 
 import os
@@ -24,6 +24,8 @@ from .base import Backend, Query, RunContext
 _NAME = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 _HOST = re.compile(r"^[a-z0-9.-]+$")
 _HTTP_PATH = re.compile(r"^/[A-Za-z0-9/_.?=-]+$")
+# An application id (UUID) or a user name. It goes into a GRANT statement.
+_PRINCIPAL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}$")
 CONNECT_TIMEOUT_SECONDS = 60
 
 
@@ -52,9 +54,13 @@ class DatabricksSettings:
     host: str
     http_path: str
     catalog: str
-    runner: Credential
-    # Optional read-only principal for the grader. Falls back to the runner.
-    grader: Credential
+    # Trusted: makes and drops run schemas, loads lesson data, reads results.
+    platform: Credential
+    # Not trusted: runs learner SQL with rights on one run schema only.
+    learner: Credential
+    # The name of the learner principal in a GRANT statement. For OAuth this is
+    # the application id, which is also the client id.
+    learner_principal: str
     schema_prefix: str = "df_run_"
 
     @classmethod
@@ -69,12 +75,14 @@ class DatabricksSettings:
             )
 
         host = env.get("DF_DBX_HOST", "").removeprefix("https://").rstrip("/").lower()
+        learner = credential("DF_DBX_LEARNER_")
         settings = cls(
             host=host,
             http_path=env.get("DF_DBX_HTTP_PATH", ""),
             catalog=env.get("DF_DBX_CATALOG", ""),
-            runner=credential("DF_DBX_"),
-            grader=credential("DF_DBX_GRADER_"),
+            platform=credential("DF_DBX_PLATFORM_"),
+            learner=learner,
+            learner_principal=env.get("DF_DBX_LEARNER_PRINCIPAL", "") or learner.client_id,
             schema_prefix=env.get("DF_DBX_SCHEMA_PREFIX", "df_run_"),
         )
         settings.validate()
@@ -92,9 +100,18 @@ class DatabricksSettings:
             raise ConfigError("DF_DBX_CATALOG must be lowercase letters, digits and underscores")
         if not _NAME.match(self.schema_prefix) or len(self.schema_prefix) > 20:
             raise ConfigError("DF_DBX_SCHEMA_PREFIX must be a short lowercase name")
-        if not self.runner.is_set:
+        for name, credential in (("PLATFORM", self.platform), ("LEARNER", self.learner)):
+            if not credential.is_set:
+                raise ConfigError(
+                    f"Set DF_DBX_{name}_CLIENT_ID and DF_DBX_{name}_CLIENT_SECRET (preferred), "
+                    f"or DF_DBX_{name}_TOKEN"
+                )
+        if self.platform == self.learner:
+            raise ConfigError("The platform principal and the learner principal must be different")
+        if not _PRINCIPAL.match(self.learner_principal):
             raise ConfigError(
-                "Set DF_DBX_CLIENT_ID and DF_DBX_CLIENT_SECRET (preferred), or DF_DBX_TOKEN"
+                "DF_DBX_LEARNER_PRINCIPAL must be the application id or the name of the "
+                "learner principal"
             )
 
 
@@ -142,8 +159,8 @@ def _connect(settings: DatabricksSettings, credential: Credential):
 class DatabricksBackend(Backend):
     name = "databricks"
     dialect = "databricks"
-    seed_target = "lab"
-    build_target = "lab"
+    seed_target = "seed"
+    build_target = "learner"
 
     def __init__(self, settings: DatabricksSettings, connect: Connect = _connect):
         self.settings = settings
@@ -155,7 +172,7 @@ class DatabricksBackend(Backend):
             raise ValueError("execution id must be a UUID")
         return RunContext(execution_id, workspace, f"{self.settings.schema_prefix}{suffix}")
 
-    def profile(self, ctx: RunContext) -> dict:
+    def _output(self, ctx: RunContext, credential: Credential, prefix: str) -> dict:
         output = {
             "type": "databricks",
             "catalog": self.settings.catalog,
@@ -165,28 +182,60 @@ class DatabricksBackend(Backend):
             "threads": 1,
         }
         # Secrets stay in the environment. They are not written to the workspace.
-        if self.settings.runner.token:
-            output["token"] = "{{ env_var('DF_DBX_TOKEN') }}"
+        if credential.token:
+            output["token"] = f"{{{{ env_var('{prefix}TOKEN') }}}}"
         else:
             output["auth_type"] = "oauth"
-            output["client_id"] = "{{ env_var('DF_DBX_CLIENT_ID') }}"
-            output["client_secret"] = "{{ env_var('DF_DBX_CLIENT_SECRET') }}"
-        return {"lab": output}
+            output["client_id"] = f"{{{{ env_var('{prefix}CLIENT_ID') }}}}"
+            output["client_secret"] = f"{{{{ env_var('{prefix}CLIENT_SECRET') }}}}"
+        return output
 
-    def env(self, ctx: RunContext) -> dict[str, str]:
-        runner = self.settings.runner
-        if runner.token:
-            return {"DF_DBX_TOKEN": runner.token}
-        return {"DF_DBX_CLIENT_ID": runner.client_id, "DF_DBX_CLIENT_SECRET": runner.client_secret}
+    def profile(self, ctx: RunContext) -> dict:
+        return {
+            # Trusted step: the platform principal loads the lesson data.
+            "seed": self._output(ctx, self.settings.platform, "DF_DBX_PLATFORM_"),
+            # Learner SQL runs as the learner principal.
+            "learner": self._output(ctx, self.settings.learner, "DF_DBX_LEARNER_"),
+        }
+
+    def env(self, ctx: RunContext, target: str) -> dict[str, str]:
+        """Only the credential of this step. The learner step does not get the
+        platform secret."""
+        if target == "seed":
+            credential, prefix = self.settings.platform, "DF_DBX_PLATFORM_"
+        elif target == "learner":
+            credential, prefix = self.settings.learner, "DF_DBX_LEARNER_"
+        else:
+            raise ValueError(f"unknown target: {target!r}")
+        if credential.token:
+            return {f"{prefix}TOKEN": credential.token}
+        return {
+            f"{prefix}CLIENT_ID": credential.client_id,
+            f"{prefix}CLIENT_SECRET": credential.client_secret,
+        }
 
     def secrets(self) -> list[str]:
         # The workspace address is not a secret, but a learner does not need it.
         return [
-            *self.settings.runner.secrets(),
-            *self.settings.grader.secrets(),
+            *self.settings.platform.secrets(),
+            *self.settings.learner.secrets(),
             self.settings.host,
             self.settings.http_path,
         ]
+
+    def prepare(self, ctx: RunContext) -> None:
+        """Make the schema of the run and give the learner principal rights on it.
+
+        The learner principal gets no right to change the lesson data: tables
+        that the platform principal loads stay read-only for it.
+        """
+        schema = self._schema_sql(ctx.schema)
+        with self._query(self.settings.platform) as query:
+            query(f"create schema if not exists {schema} comment 'DataForge run'")
+            query(
+                f"grant use schema, create table, select on schema {schema} "
+                f"to `{self.settings.learner_principal}`"
+            )
 
     def _schema_sql(self, schema: str) -> str:
         if not _NAME.match(schema) or not schema.startswith(self.settings.schema_prefix):
@@ -216,8 +265,7 @@ class DatabricksBackend(Backend):
 
     @contextmanager
     def grader_query(self, ctx: RunContext) -> Iterator[Query]:
-        grader = self.settings.grader
-        with self._query(grader if grader.is_set else self.settings.runner) as query:
+        with self._query(self.settings.platform) as query:
             yield query
 
     def columns(self, query: Query, ctx: RunContext, table: str) -> list[tuple[str, str]]:
@@ -233,12 +281,12 @@ class DatabricksBackend(Backend):
         return [(r[0], str(r[1]).upper()) for r in rows]
 
     def cleanup(self, ctx: RunContext) -> None:
-        with self._query(self.settings.runner) as query:
+        with self._query(self.settings.platform) as query:
             query(f"drop schema if exists {self._schema_sql(ctx.schema)} cascade")
 
     def sweep(self, max_age_minutes: int) -> int:
         """Drop run schemas older than the limit (left by a stopped worker)."""
-        with self._query(self.settings.runner) as query:
+        with self._query(self.settings.platform) as query:
             rows = query(
                 "select schema_name "
                 f"from `{self.settings.catalog}`.information_schema.schemata "

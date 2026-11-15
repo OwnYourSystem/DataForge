@@ -42,7 +42,7 @@ class DuckDBBackend(Backend):
             },
         }
 
-    def env(self, ctx: RunContext) -> dict[str, str]:
+    def env(self, ctx: RunContext, target: str) -> dict[str, str]:
         return {"DF_DUCKDB_PATH": str(ctx.workspace / DUCKDB_FILE)}
 
     def relation(self, ctx: RunContext, table: str) -> str:

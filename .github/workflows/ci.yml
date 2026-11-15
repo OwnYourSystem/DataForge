@@ -47,6 +47,24 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
 
+  infra:
+    name: Terraform format and validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.2"
+      - run: terraform fmt -check -recursive infra
+      - name: Validate each root module
+        run: |
+          for root in infra/bootstrap/azure-state infra/envs/azure-dev; do
+            echo "::group::$root"
+            terraform -chdir="$root" init -backend=false -input=false
+            terraform -chdir="$root" validate
+            echo "::endgroup::"
+          done
+
   stack:
     name: Full stack smoke test (Docker Compose, Postgres)
     runs-on: ubuntu-latest
