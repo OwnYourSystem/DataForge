@@ -11,6 +11,7 @@ run on Azure Databricks: see [docs/databricks.md](docs/databricks.md).
 
 - Original specification: [docs/spec/dataforge-v1.0-original.md](docs/spec/dataforge-v1.0-original.md)
 - Decisions that changed it: [docs/spec/fast-path.md](docs/spec/fast-path.md)
+- Platform track (the plan from here): [docs/spec/platform-proof-track.md](docs/spec/platform-proof-track.md)
 
 ## Run it
 
