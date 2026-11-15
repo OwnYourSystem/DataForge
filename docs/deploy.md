@@ -22,12 +22,11 @@ people sign in, change to the split layout (see the end of this page).
    build takes approximately 5 to 10 minutes.
 3. Copy the address of the `dataforge` service. It looks like
    `https://dataforge-xxxx.onrender.com`.
-4. In the Supabase dashboard, project `dataforge`, open **Authentication,
-   URL configuration**. Set **Site URL** to that address, and add the address
-   to **Redirect URLs**. Without this step, the sign-in link opens
-   `localhost` and not the app.
-5. Open the address on your phone, type your email address, and open the
-   link from the email on the same phone.
+4. In the Supabase dashboard, project `dataforge`, do the Supabase steps 3
+   and 4 in [auth.md](auth.md) with that address: the site URL, the redirect
+   URL, and the sign-in code in the 2 email templates.
+5. Open the address, type your email address, and type the code from the
+   email.
 
 Render deploys again after each push to the branch that the blueprint was
 made from.

@@ -41,13 +41,15 @@ function SupabaseHome({ client }: { client: SupabaseClient }) {
 
 function EmailSignIn({ client }: { client: SupabaseClient }) {
   const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [code, setCode] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "checking">("idle");
   const [error, setError] = useState<string | null>(null);
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validCode = /^[0-9]{6,8}$/.test(code);
 
   const send = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!valid || state === "sending") return;
+    if (!validEmail || state === "sending") return;
     setState("sending");
     setError(null);
     const { error: failure } = await client.auth.signInWithOtp({
@@ -63,20 +65,61 @@ function EmailSignIn({ client }: { client: SupabaseClient }) {
       setState("idle");
       return;
     }
+    setCode("");
     setState("sent");
   };
 
-  if (state === "sent") {
+  const verify = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!validCode || state === "checking") return;
+    setState("checking");
+    setError(null);
+    const { error: failure } = await client.auth.verifyOtp({ email, token: code, type: "email" });
+    if (failure) {
+      setError("The code is not correct, or it is too old. Check the code or get a new one.");
+      setState("sent");
+    }
+    // On success, the session change shows the workbench.
+  };
+
+  if (state === "sent" || state === "checking") {
     return (
       <main className="signin">
-        <div>
-          <h1>Check your email</h1>
+        <form onSubmit={verify}>
+          <h1>Type your code</h1>
           <p>
-            We sent a sign-in link to <strong>{email}</strong>. Open the link on this device to
-            start the lab.
+            We sent a sign-in code to <strong>{email}</strong>. Type the code here. You can read
+            the email on a different device.
           </p>
-          <button onClick={() => setState("idle")}>Use a different email</button>
-        </div>
+          {error ? (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <label htmlFor="code">Sign-in code</label>
+          <input
+            id="code"
+            className="code-input"
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 8))}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="123456"
+            autoFocus
+          />
+          <button type="submit" className="primary" disabled={!validCode || state === "checking"}>
+            {state === "checking" ? "Checking…" : "Sign in"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setState("idle");
+            }}
+          >
+            Use a different email
+          </button>
+        </form>
       </main>
     );
   }
@@ -85,7 +128,7 @@ function EmailSignIn({ client }: { client: SupabaseClient }) {
     <main className="signin">
       <form onSubmit={send}>
         <h1>DataForge</h1>
-        <p>Type your email. We send you a link to sign in. No password.</p>
+        <p>Type your email. We send you a code to sign in. No password.</p>
         {error ? (
           <p className="error" role="alert">
             {error}
@@ -101,8 +144,8 @@ function EmailSignIn({ client }: { client: SupabaseClient }) {
           autoFocus
           autoComplete="email"
         />
-        <button type="submit" className="primary" disabled={!valid || state === "sending"}>
-          {state === "sending" ? "Sending…" : "Send sign-in link"}
+        <button type="submit" className="primary" disabled={!validEmail || state === "sending"}>
+          {state === "sending" ? "Sending…" : "Send sign-in code"}
         </button>
       </form>
     </main>
