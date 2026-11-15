@@ -21,6 +21,7 @@ The flyer is accepted as a design. It is not ready for the public, for 2 reasons
 2. **The live portal is the free, single-container test deployment.** It is for a small number of trusted people: see [../deploy.md](../deploy.md).
 
 Publish the flyer when sign-in works and a person has completed the lab on the live portal.
+At that time, measure the time of a run on the live portal and correct the "10 to 20 seconds" tile if it is wrong.
 
 ## What the flyer shows, checked against the code
 
@@ -34,7 +35,7 @@ Publish the flyer when sign-in works and a person has completed the lab on the l
 | "Passed", "Score: 100 / 100", "6.5 s compute" | Yes, for a correct model | `apps/api/dataforge/grader.py` |
 | The 5 checks and their points: 15, 30, 20, 25, 10 | Yes | `apps/api/dataforge/grader.py` |
 | "Earlier attempt": not passed, 60 of 100, 2 failed checks | Yes. This is the result of the starter file | `apps/api/tests/test_lesson_e2e.py` |
-| "A result in 10 to 20 seconds" | Yes on the free deployment. About 7 seconds in local tests | Test runs |
+| "A result in 10 to 20 seconds" | **Not measured.** A run takes about 7 seconds in local tests and in CI. No run has completed on the live portal yet, so 10 to 20 seconds is an estimate for the free deployment | Test runs |
 | "Your work and your best score are saved" | Yes | `apps/api/dataforge/db.py` |
 | "Each run starts clean" | Yes. Each run gets a new workspace, deleted after the run | `apps/api/dataforge/worker.py` |
 | "The solution is never shown" | Yes. Solutions are not in the runtime images | `.dockerignore`, CI |
