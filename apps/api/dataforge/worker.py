@@ -100,6 +100,7 @@ def process(
         ctx = backend.new_context(execution_id, Path(tmp))
         try:
             runner.prepare_workspace(lesson, files, backend, ctx)
+            _bounded(lambda: backend.prepare(ctx), call_timeout)
             result = runner.HANDLERS[operation](backend, ctx, timeout_seconds)
             if result.status != "timed_out":
                 assessment = _bounded(lambda: grader.grade(lesson, backend, ctx), call_timeout)

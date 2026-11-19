@@ -13,3 +13,12 @@ out/
 .env.local
 *.tsbuildinfo
 next-env.d.ts
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+backend.hcl
+crash.log

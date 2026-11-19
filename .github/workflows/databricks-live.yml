@@ -24,10 +24,10 @@ jobs:
       DF_DBX_HOST: ${{ secrets.DF_DBX_HOST }}
       DF_DBX_HTTP_PATH: ${{ secrets.DF_DBX_HTTP_PATH }}
       DF_DBX_CATALOG: ${{ secrets.DF_DBX_CATALOG }}
-      DF_DBX_CLIENT_ID: ${{ secrets.DF_DBX_CLIENT_ID }}
-      DF_DBX_CLIENT_SECRET: ${{ secrets.DF_DBX_CLIENT_SECRET }}
-      DF_DBX_GRADER_CLIENT_ID: ${{ secrets.DF_DBX_GRADER_CLIENT_ID }}
-      DF_DBX_GRADER_CLIENT_SECRET: ${{ secrets.DF_DBX_GRADER_CLIENT_SECRET }}
+      DF_DBX_PLATFORM_CLIENT_ID: ${{ secrets.DF_DBX_PLATFORM_CLIENT_ID }}
+      DF_DBX_PLATFORM_CLIENT_SECRET: ${{ secrets.DF_DBX_PLATFORM_CLIENT_SECRET }}
+      DF_DBX_LEARNER_CLIENT_ID: ${{ secrets.DF_DBX_LEARNER_CLIENT_ID }}
+      DF_DBX_LEARNER_CLIENT_SECRET: ${{ secrets.DF_DBX_LEARNER_CLIENT_SECRET }}
     steps:
       - name: Stop if the secrets are not set
         working-directory: .

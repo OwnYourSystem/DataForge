@@ -1,0 +1,77 @@
+name: Infra azure-dev
+
+# Plan on a pull request that changes infra/. Apply or destroy only by hand,
+# with approval on the GitHub environment `azure-dev`.
+# Setup (one time, see infra/README.md): repository variables AZURE_CLIENT_ID,
+# AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, TFSTATE_RESOURCE_GROUP,
+# TFSTATE_STORAGE_ACCOUNT. No secret is stored: sign-in uses GitHub OIDC.
+on:
+  pull_request:
+    paths: ["infra/**", ".github/workflows/infra-azure-dev.yml"]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to do in azure-dev"
+        type: choice
+        options: [plan, apply, destroy]
+        default: plan
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: infra-azure-dev
+  cancel-in-progress: false
+
+env:
+  ARM_USE_OIDC: "true"
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_IN_AUTOMATION: "true"
+  ROOT: infra/envs/azure-dev
+
+jobs:
+  plan:
+    name: Plan
+    # Skip when the Azure identity is not set up yet.
+    if: ${{ vars.AZURE_CLIENT_ID != '' && (github.event_name == 'pull_request' || inputs.action == 'plan') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.2"
+      - name: Init
+        run: >
+          terraform -chdir="$ROOT" init -input=false
+          -backend-config="resource_group_name=${{ vars.TFSTATE_RESOURCE_GROUP }}"
+          -backend-config="storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT }}"
+          -backend-config="container_name=tfstate"
+      - run: terraform -chdir="$ROOT" plan -input=false -lock-timeout=5m
+
+  change:
+    name: Apply or destroy (needs approval)
+    if: ${{ vars.AZURE_CLIENT_ID != '' && github.event_name == 'workflow_dispatch' && inputs.action != 'plan' }}
+    runs-on: ubuntu-latest
+    # Add required reviewers to this environment in the repository settings.
+    environment: azure-dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.2"
+      - name: Init
+        run: >
+          terraform -chdir="$ROOT" init -input=false
+          -backend-config="resource_group_name=${{ vars.TFSTATE_RESOURCE_GROUP }}"
+          -backend-config="storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT }}"
+          -backend-config="container_name=tfstate"
+      - name: Apply
+        if: ${{ inputs.action == 'apply' }}
+        run: terraform -chdir="$ROOT" apply -input=false -auto-approve -lock-timeout=5m
+      - name: Destroy
+        if: ${{ inputs.action == 'destroy' }}
+        run: terraform -chdir="$ROOT" destroy -input=false -auto-approve -lock-timeout=5m

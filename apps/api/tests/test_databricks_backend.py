@@ -27,8 +27,10 @@ ENV = {
     "DF_DBX_HOST": "https://adb-1234.5.azuredatabricks.net/",
     "DF_DBX_HTTP_PATH": "/sql/1.0/warehouses/abc123",
     "DF_DBX_CATALOG": "dataforge_lab",
-    "DF_DBX_CLIENT_ID": "client-id-value",
-    "DF_DBX_CLIENT_SECRET": "client-secret-value",
+    "DF_DBX_PLATFORM_CLIENT_ID": "platform-id-value",
+    "DF_DBX_PLATFORM_CLIENT_SECRET": "platform-secret-value",
+    "DF_DBX_LEARNER_CLIENT_ID": "0f1e2d3c-1111-4222-8333-444455556666",
+    "DF_DBX_LEARNER_CLIENT_SECRET": "learner-secret-value",
 }
 
 
@@ -102,7 +104,13 @@ def test_settings_normalize_the_host():
         {"DF_DBX_CATALOG": "bad`; drop schema x cascade --"},
         {"DF_DBX_CATALOG": "Has-Dash"},
         {"DF_DBX_SCHEMA_PREFIX": "x'"},
-        {"DF_DBX_CLIENT_SECRET": ""},
+        {"DF_DBX_PLATFORM_CLIENT_SECRET": ""},
+        {"DF_DBX_LEARNER_CLIENT_SECRET": ""},
+        {"DF_DBX_LEARNER_PRINCIPAL": "x` to `account users"},
+        {
+            "DF_DBX_LEARNER_CLIENT_ID": "platform-id-value",
+            "DF_DBX_LEARNER_CLIENT_SECRET": "platform-secret-value",
+        },
     ],
 )
 def test_bad_settings_are_rejected(overrides):
@@ -127,25 +135,88 @@ def test_profile_has_no_secret_values(lessons, tmp_path):
     solution = (lessons[LESSON].root / "solution" / MODEL).read_text()
     runner.prepare_workspace(lessons[LESSON], {MODEL: solution}, backend, ctx)
     text = (tmp_path / "profiles.yml").read_text()
-    assert "client-secret-value" not in text and "client-id-value" not in text
-    output = yaml.safe_load(text)["retail_lakehouse"]["outputs"]["lab"]
+    for secret in ("platform-secret-value", "learner-secret-value", "platform-id-value"):
+        assert secret not in text
+    outputs = yaml.safe_load(text)["retail_lakehouse"]["outputs"]
+    assert list(outputs) == ["learner"]  # one target only: the next step
+    output = outputs["learner"]
     assert output["type"] == "databricks"
     assert output["catalog"] == "dataforge_lab" and output["schema"] == SCHEMA
     assert output["auth_type"] == "oauth"
-    assert output["client_secret"] == "{{ env_var('DF_DBX_CLIENT_SECRET') }}"
-    assert backend.env(ctx) == {
-        "DF_DBX_CLIENT_ID": "client-id-value",
-        "DF_DBX_CLIENT_SECRET": "client-secret-value",
+    assert output["client_secret"] == "{{ env_var('DF_DBX_LEARNER_CLIENT_SECRET') }}"
+
+
+def test_each_step_gets_only_its_own_credential(tmp_path):
+    backend = make_backend()
+    ctx = backend.new_context(EXECUTION_ID, tmp_path)
+    seed, learner = backend.env(ctx, "seed"), backend.env(ctx, "learner")
+    assert seed == {
+        "DF_DBX_PLATFORM_CLIENT_ID": "platform-id-value",
+        "DF_DBX_PLATFORM_CLIENT_SECRET": "platform-secret-value",
     }
+    assert learner == {
+        "DF_DBX_LEARNER_CLIENT_ID": "0f1e2d3c-1111-4222-8333-444455556666",
+        "DF_DBX_LEARNER_CLIENT_SECRET": "learner-secret-value",
+    }
+    # The learner step must not hold the platform secret.
+    assert "platform-secret-value" not in str(learner)
+    profile = backend.profile(ctx)
+    assert "PLATFORM" in profile["seed"]["client_secret"]
+    assert "LEARNER" in profile["learner"]["client_secret"]
+    assert "PLATFORM" not in str(profile["learner"])
+    with pytest.raises(ValueError):
+        backend.env(ctx, "other")
 
 
 def test_token_auth_profile(tmp_path):
-    backend = make_backend(DF_DBX_CLIENT_ID="", DF_DBX_CLIENT_SECRET="", DF_DBX_TOKEN="dapi-x")
+    backend = make_backend(
+        DF_DBX_LEARNER_CLIENT_ID="",
+        DF_DBX_LEARNER_CLIENT_SECRET="",
+        DF_DBX_LEARNER_TOKEN="dapi-x",
+        DF_DBX_LEARNER_PRINCIPAL="learner@example.com",
+    )
     ctx = backend.new_context(EXECUTION_ID, tmp_path)
-    output = backend.profile(ctx)["lab"]
-    assert output["token"] == "{{ env_var('DF_DBX_TOKEN') }}" and "auth_type" not in output
-    assert backend.env(ctx) == {"DF_DBX_TOKEN": "dapi-x"}
+    output = backend.profile(ctx)["learner"]
+    assert output["token"] == "{{ env_var('DF_DBX_LEARNER_TOKEN') }}" and "auth_type" not in output
+    assert backend.env(ctx, "learner") == {"DF_DBX_LEARNER_TOKEN": "dapi-x"}
     assert "dapi-x" in backend.secrets()
+
+
+def test_token_auth_needs_the_principal_name():
+    with pytest.raises(ConfigError):
+        make_backend(
+            DF_DBX_LEARNER_CLIENT_ID="", DF_DBX_LEARNER_CLIENT_SECRET="", DF_DBX_LEARNER_TOKEN="x"
+        )
+
+
+def test_prepare_makes_the_schema_and_grants_the_learner_this_schema_only(tmp_path):
+    warehouse = FakeWarehouse()
+    backend = make_backend(warehouse)
+    backend.prepare(backend.new_context(EXECUTION_ID, tmp_path))
+    schema = f"`dataforge_lab`.`{SCHEMA}`"
+    assert warehouse.statements == [
+        f"create schema if not exists {schema} comment 'DataForge run'",
+        f"grant use schema, create table, select on schema {schema} "
+        "to `0f1e2d3c-1111-4222-8333-444455556666`",
+    ]
+    # The platform principal does this work, not the learner principal.
+    assert [c.client_id for c in warehouse.credentials] == ["platform-id-value"]
+    grant = warehouse.statements[1]
+    for right in ("modify", "all privileges", "manage", "create schema", "on catalog"):
+        assert right not in grant
+    assert warehouse.open == 0
+
+
+def test_each_query_carries_the_execution_id(lessons, tmp_path):
+    backend = make_backend()
+    ctx = backend.new_context(EXECUTION_ID, tmp_path)
+    solution = (lessons[LESSON].root / "solution" / MODEL).read_text()
+    runner.prepare_workspace(lessons[LESSON], {MODEL: solution}, backend, ctx)
+    project = yaml.safe_load((tmp_path / "dbt_project.yml").read_text())
+    assert project["query-comment"] == {
+        "comment": f"dataforge_execution={EXECUTION_ID}",
+        "append": True,
+    }
 
 
 def test_dbt_accepts_the_generated_project(lessons, tmp_path):
@@ -156,7 +227,7 @@ def test_dbt_accepts_the_generated_project(lessons, tmp_path):
     solution = (lessons[LESSON].root / "solution" / MODEL).read_text()
     runner.prepare_workspace(lessons[LESSON], {MODEL: solution}, backend, ctx)
     dbt = Path(sys.executable).parent / "dbt"
-    env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), **backend.env(ctx)}
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), **backend.env(ctx, "learner")}
     done = subprocess.run(
         [str(dbt), "parse", "--profiles-dir", ".", "--no-use-colors", "--no-version-check"],
         cwd=tmp_path,
@@ -204,17 +275,16 @@ def test_sweep_refuses_a_schema_that_is_not_a_run_schema(name):
     assert not any(s.startswith("drop") for s in warehouse.statements)
 
 
-def test_grader_uses_its_own_credential_when_one_is_set(tmp_path):
+def test_trusted_work_uses_the_platform_principal(tmp_path):
     warehouse = FakeWarehouse()
-    backend = make_backend(
-        warehouse, DF_DBX_GRADER_CLIENT_ID="grader-id", DF_DBX_GRADER_CLIENT_SECRET="grader-secret"
-    )
+    backend = make_backend(warehouse)
     ctx = backend.new_context(EXECUTION_ID, tmp_path)
     with backend.grader_query(ctx) as query:
         query("select 1")
     backend.cleanup(ctx)
-    assert [c.client_id for c in warehouse.credentials] == ["grader-id", "client-id-value"]
-    assert "grader-secret" in backend.secrets()
+    backend.sweep(max_age_minutes=30)
+    assert {c.client_id for c in warehouse.credentials} == {"platform-id-value"}
+    assert "learner-secret-value" in backend.secrets()
 
 
 GOOD_ROWS = [
@@ -296,7 +366,7 @@ def test_grader_does_not_pass_when_the_warehouse_is_not_available(lessons, tmp_p
 def test_secrets_are_removed_from_learner_logs(tmp_path):
     backend = make_backend()
     text = runner._sanitize(
-        f"error for client-secret-value in {tmp_path}/models", tmp_path, backend.secrets()
+        f"error for learner-secret-value in {tmp_path}/models", tmp_path, backend.secrets()
     )
     assert text == "error for [redacted] in /workspace/models"
     text = runner._sanitize(
