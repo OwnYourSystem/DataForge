@@ -1,5 +1,10 @@
 # Threat model
 
+> **Written for the learning portal.** On 19 November 2026 DataForge became a
+> read-only, metadata-only tool ([ADR-005](adr/005-change-impact-tool.md)).
+> This model is rewritten in Phase 1 for metadata-only access. Until then, it
+> describes the archived lab.
+
 Date: 15 November 2026. Update this file in each phase of the platform track.
 
 ## What we protect
