@@ -9,6 +9,7 @@ This repository holds the **fast-path vertical slice**: one lesson (LAB-001)
 that runs end to end on DuckDB, with no cloud account. The same lesson can
 run on Azure Databricks: see [docs/databricks.md](docs/databricks.md).
 
+- **Overview (start here):** [docs/overview.md](docs/overview.md)
 - Original specification: [docs/spec/dataforge-v1.0-original.md](docs/spec/dataforge-v1.0-original.md)
 - Decisions that changed it: [docs/spec/fast-path.md](docs/spec/fast-path.md)
 - Platform track (the plan from here): [docs/spec/platform-proof-track.md](docs/spec/platform-proof-track.md)
