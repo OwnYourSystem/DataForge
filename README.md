@@ -1,20 +1,54 @@
 # DataForge
 
-Guided data engineering labs in the browser. A learner opens a lesson, writes
-a dbt model, runs it, and gets an automated grade. No local setup.
+**Know who you will break before you merge.**
 
-![The workbench after a passed run](docs/images/workbench.png)
+DataForge finds changes that cross an ownership boundary on a data platform,
+before they break data that another team depends on. It reads metadata from
+Terraform, Azure, Databricks Unity Catalog, and dbt, joins it into 1 graph
+with an owner on each node, and tells the owners on the other side of a
+change, in the pull request.
 
-This repository holds the **fast-path vertical slice**: one lesson (LAB-001)
-that runs end to end on DuckDB, with no cloud account. The same lesson can
-run on Azure Databricks: see [docs/databricks.md](docs/databricks.md).
+DataForge reads metadata only. It never reads rows of data, and it never
+writes to the platform that it reads.
 
 - **Overview (start here):** [docs/overview.md](docs/overview.md)
-- Original specification: [docs/spec/dataforge-v1.0-original.md](docs/spec/dataforge-v1.0-original.md)
-- Decisions that changed it: [docs/spec/fast-path.md](docs/spec/fast-path.md)
-- Platform track (the plan from here): [docs/spec/platform-proof-track.md](docs/spec/platform-proof-track.md)
+- Decision to change direction: [docs/adr/005-change-impact-tool.md](docs/adr/005-change-impact-tool.md)
+- Desk research method and gate: [docs/research/method.md](docs/research/method.md)
+- Reference platform (Terraform): [infra/README.md](infra/README.md)
 
-## Run it
+## Status
+
+| Area | State |
+|---|---|
+| Reference platform on Azure (Terraform) | Written and validated. **Not applied** |
+| Desk research on boundary incidents | **Not started** |
+| Collectors, graph, impact engine | **Not started** |
+| Learning portal | **Archived.** See below |
+
+The full status and roadmap are in [docs/overview.md](docs/overview.md).
+
+## Repository layout
+
+| Path | Contents | State |
+|---|---|---|
+| `infra/` | Terraform: the reference platform on Azure Databricks | Active |
+| `docs/` | Overview, ADRs, research, threat model | Active |
+| `apps/api/` | API, database layer, worker queue | Active, to be reused for the graph store |
+| `apps/web/` | Web portal with the lab editor | Archived |
+| `curriculum/` | LAB-001 | Archived demo |
+| `deploy/`, `render.yaml` | The portal deployment on Render | Archived, to be removed |
+
+## The archived learning portal
+
+The first version of DataForge was a learning portal with a hands-on dbt
+lab. That direction stopped on 19 November 2026. The code stays in the
+repository as a demo, and CI still tests it, but it is not developed.
+
+- What it was: [docs/spec/learning-portal-overview.md](docs/spec/learning-portal-overview.md)
+- Original specification: [docs/spec/dataforge-v1.0-original.md](docs/spec/dataforge-v1.0-original.md)
+- Decisions in the first version: [docs/spec/fast-path.md](docs/spec/fast-path.md)
+
+To run the archived lab on your computer:
 
 ```bash
 docker compose up --build
@@ -22,80 +56,8 @@ docker compose up --build
 
 Open http://localhost:3000, type a name, and select **Build and test**.
 
-## Deploy it
-
-A test deployment on Render: see [docs/deploy.md](docs/deploy.md).
-
-## Run it without Docker
-
-```bash
-cd apps/api
-python -m venv .venv && .venv/bin/pip install -e ".[worker,dev]"
-.venv/bin/uvicorn dataforge.main:app_factory --factory --port 8000
-```
-
-```bash
-cd apps/api
-.venv/bin/python -m dataforge.worker
-```
-
-```bash
-cd apps/web
-npm ci && npm run dev
-```
-
-Without `DATABASE_URL`, the API and the worker use a SQLite file in
-`apps/api`. Start them from the same directory.
-
-## Test it
+## Tests
 
 ```bash
 cd apps/api && .venv/bin/pytest -q
 ```
-
-The suite runs real dbt against DuckDB. It takes about 1 minute.
-
-```bash
-scripts/smoke.sh http://localhost:8000
-```
-
-The smoke script needs a running stack.
-
-## How it works
-
-```text
-Browser (Next.js + Monaco)
-  └── API (FastAPI): identity, lessons, files, execution requests
-        └── Postgres: state and the job queue (table `executions`)
-              └── Worker: trusted dbt handlers + independent grader
-                    └── DuckDB file in a temporary workspace, deleted after each run
-```
-
-| Path | Contents |
-|---|---|
-| `apps/api/dataforge/` | API, worker, runner, grader, SQL guard |
-| `apps/api/dataforge/backends/` | Execution backends: DuckDB and Databricks |
-| `apps/web/` | Workbench UI |
-| `curriculum/retail-lakehouse/lab-001/` | Lesson manifest, instructions, trusted dbt project, starter, solution |
-| `infra/` | Terraform for the lab platform on Azure Databricks |
-| `docs/adr/`, `docs/threat-model.md` | Decisions and the threat model |
-| `.github/workflows/ci.yml` | Lint, tests, web build, full-stack smoke test |
-
-## Security rules in this slice
-
-- With `DF_AUTH_MODE=jwt`, the API accepts only tokens that the identity provider signed (asymmetric keys, issuer, audience, and expiry are checked).
-- The learner sends an operation id (`dbt_build`). No learner text goes into a command.
-- The learner can write only the files in `editable_files`. `profiles.yml`, tests, and macros are trusted.
-- Learner SQL can use `source()` and `ref()` only. `env_var()` and all other Jinja are rejected.
-- A model must be one query, and it can read only `source()` and `ref()` relations.
-- dbt gets a minimal environment. Worker variables do not reach it.
-- Learner SQL runs with DuckDB file access off.
-- The grader opens the result read-only and calculates expected values itself.
-- Reference solutions are not in the runtime images (`.dockerignore`).
-
-## Not done yet
-
-- **Email-link test by a person.** Token sign-in is proven against the real Supabase project at the API (see [docs/auth.md](docs/auth.md)). The email link is not yet tested by a person. Without a `.env` file, the stack uses the development sign-in: do not put that on a public host.
-- **Databricks live proof.** The Databricks backend is not yet run against a real workspace.
-- **Migrations.** Tables are created at startup. Add Alembic before the schema changes.
-- Monthly quotas, Tier B (Terraform labs), SSE log streaming.

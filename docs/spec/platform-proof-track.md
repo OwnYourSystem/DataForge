@@ -2,6 +2,10 @@
 
 Date: 15 November 2026
 Status: accepted, with 3 edits (see "Changes from the proposed version")
+
+> **Replaced in part on 19 November 2026** by [../overview.md](../overview.md):
+> the position, the goals, rules 3, 4 and 6, the new rule 9, and the roadmap.
+> The phases below describe the learning portal and are no longer the plan.
 Applies to: `OwnYourSystem/DataForge`
 Read with: `docs/spec/dataforge-v1.0-original.md`, `docs/spec/fast-path.md`
 
