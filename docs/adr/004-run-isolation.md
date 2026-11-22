@@ -1,7 +1,9 @@
 # ADR-004: Two kinds of service principal for run isolation
 
 Date: 15 November 2026
-Status: accepted
+Status: accepted. Replaced in part by [ADR-005](005-change-impact-tool.md) on 19 November 2026:
+there are no learners, so the learner principal is not needed. The model of
+separate identities with separate rights stays, for the read-only collectors.
 Replaces: the "one runner principal" model in the first Databricks backend
 
 ## Context

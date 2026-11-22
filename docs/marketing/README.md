@@ -1,5 +1,8 @@
 # Marketing material
 
+> **Withdrawn on 19 November 2026.** The flyer describes the learning portal,
+> which is stopped ([ADR-005](../adr/005-change-impact-tool.md)). Do not publish it.
+
 | File | Contents |
 |---|---|
 | [flyer.webp](flyer.webp) | The accepted flyer for the portal, version of 15 November 2026 |
