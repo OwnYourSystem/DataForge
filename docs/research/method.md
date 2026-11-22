@@ -1,7 +1,7 @@
 # Desk research: method and gate
 
 Date: 19 November 2026
-Status: round 1 done on 22 November 2026. Result: [boundary-incidents.md](boundary-incidents.md). Round 2 open.
+Status: rounds 1 and 2 done on 22 November 2026. Check 1 fails by 1 case. Result: [boundary-incidents.md](boundary-incidents.md).
 Done by: Claude (desk research). There are no interviews.
 
 ## Question

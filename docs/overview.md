@@ -275,7 +275,7 @@ watch the data flow. It watches structure and owners.
 | Databricks backend with 2 identities | Code and offline tests. **Not run on a real workspace** |
 | Graph builder, collectors, impact engine | **Not started** |
 | Learning portal | **Stopped.** The live portal is still online until it is taken down |
-| Desk research on boundary incidents | **Round 1 done.** 2 of 3 gate checks pass. Check 1 is open: 11 strict cases of 15. See [research/boundary-incidents.md](research/boundary-incidents.md) |
+| Desk research on boundary incidents | **Done.** Check 1 fails by 1 (14 of 15). Checks 2 and 3 pass. Decision pending. See [research/boundary-incidents.md](research/boundary-incidents.md) |
 | ADRs and threat model | Written for the first version. Need an update |
 | Design partners | 0 |
 
@@ -328,10 +328,9 @@ What we do not take, and why:
 
 ### Next steps
 
-1. **Finish the desk research (round 2, 1 week, parallel to Phase 1).**
-   Round 1 found 11 strict cases of the 15 that check 1 needs. Round 2 reads
-   the blocked sources: dbt-core issues, forums, and the snippet-only pages.
-   If check 1 still fails, section 12 applies. See
+1. **Decide on the gate result.** Check 1 fails by 1 case (14 of 15). The
+   proposed decision: accept the fail, continue as a portfolio project, and
+   let the week 10 design partner check reopen the product question. See
    [research/boundary-incidents.md](research/boundary-incidents.md).
 2. **Run Phase 1 on Azure.** The Terraform is ready.
 3. **Archive the portal.** Fix nothing on learner sign-in.
@@ -384,6 +383,7 @@ What we do not take, and why:
 | 19 Nov 2026 | Pull request 3 merged: the Terraform becomes the reference platform. Interviews replaced by desk research |
 | 22 Nov 2026 | Review of a guided cloud lab. 5 adoption ideas added to the roadmap, 1 parked |
 | 22 Nov 2026 | Desk research round 1: 2 of 3 gate checks pass, check 1 open (11 of 15 cases). Survey numbers sourced and corrected |
+| 22 Nov 2026 | Desk research round 2: 3 more cases. Check 1 fails by 1 (14 of 15) |
 
 ---
 
