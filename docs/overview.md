@@ -49,15 +49,18 @@ stopped. The reasons:
    engineering is keeping data correct across teams that do not own each
    other's systems.* The verdict was **partly supported**:
    - **Supported:** cross-team correctness is a large and lasting problem.
-     Unclear ownership is a top pain point in 3 surveys (39% to 51%).
+     Unclear ownership is a top pain point in 3 surveys (41% to 51%):
+     dbt Labs 2026 (41%, vendor), dbt Labs 2024 (almost 50%, vendor), and the
+     Practical Data 2026 survey (51%, 1,101 people, independent).
    - **Not supported:** that it is *the* hardest problem.
-   - **Measured:** source-side causes (ingestion disruptions and schema drift)
-     are about 24% of incidents in the only root-cause data we found. That data
-     comes from a vendor, so treat it as an estimate.
+   - **Measured:** source-side causes (ingestion disruptions 16.6% and schema
+     drift 7.8%) are about 24% of the data quality incidents whose root cause
+     Monte Carlo's AI agent found across its customers. This is a vendor's own
+     platform data, not a survey, so treat it as an estimate.
 
-   **The sources of these numbers are not yet in the repository.** They go
-   in [research/](research/) with the desk research (see section 11). Do not
-   publish the numbers before then (rule 1).
+   The sources are in [research/surveys.md](research/surveys.md). They were
+   checked from search results only. Read the source pages before you
+   publish a number (rule 1).
    - **Pattern:** ingestion is where these failures show first and loudest.
      Disagreements about meaning are where they cost most.
 
@@ -272,7 +275,7 @@ watch the data flow. It watches structure and owners.
 | Databricks backend with 2 identities | Code and offline tests. **Not run on a real workspace** |
 | Graph builder, collectors, impact engine | **Not started** |
 | Learning portal | **Stopped.** The live portal is still online until it is taken down |
-| Desk research on boundary incidents | **Not started** |
+| Desk research on boundary incidents | **Round 1 done.** 2 of 3 gate checks pass. Check 1 is open: 11 strict cases of 15. See [research/boundary-incidents.md](research/boundary-incidents.md) |
 | ADRs and threat model | Written for the first version. Need an update |
 | Design partners | 0 |
 
@@ -325,10 +328,11 @@ What we do not take, and why:
 
 ### Next steps
 
-1. **Validate the problem with desk research (2 weeks, parallel to Phase 1).**
-   Collect public, dated incident cases and survey data, and map what existing
-   tools cover. The method and the gate are in
-   [research/method.md](research/method.md).
+1. **Finish the desk research (round 2, 1 week, parallel to Phase 1).**
+   Round 1 found 11 strict cases of the 15 that check 1 needs. Round 2 reads
+   the blocked sources: dbt-core issues, forums, and the snippet-only pages.
+   If check 1 still fails, section 12 applies. See
+   [research/boundary-incidents.md](research/boundary-incidents.md).
 2. **Run Phase 1 on Azure.** The Terraform is ready.
 3. **Archive the portal.** Fix nothing on learner sign-in.
 
@@ -379,6 +383,7 @@ What we do not take, and why:
 | 19 Nov 2026 | Integration model added: runs inside client pipelines, read-only, owner tagging as the main setup task |
 | 19 Nov 2026 | Pull request 3 merged: the Terraform becomes the reference platform. Interviews replaced by desk research |
 | 22 Nov 2026 | Review of a guided cloud lab. 5 adoption ideas added to the roadmap, 1 parked |
+| 22 Nov 2026 | Desk research round 1: 2 of 3 gate checks pass, check 1 open (11 of 15 cases). Survey numbers sourced and corrected |
 
 ---
 

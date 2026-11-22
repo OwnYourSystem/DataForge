@@ -1,7 +1,7 @@
 # Desk research: method and gate
 
 Date: 19 November 2026
-Status: method accepted. Research not started.
+Status: round 1 done on 22 November 2026. Result: [boundary-incidents.md](boundary-incidents.md). Round 2 open.
 Done by: Claude (desk research). There are no interviews.
 
 ## Question
@@ -62,4 +62,4 @@ If a check fails, DataForge stays a portfolio project
 |---|---|
 | `boundary-incidents.md` | The evidence log, the findings, and a pass or fail for each gate check |
 | `tool-landscape.md` | A gap table: what each tool covers, by layer and by owner |
-| Sources for section 2 of the overview | The surveys behind the numbers 39% to 51% and about 24% |
+| `surveys.md` | The surveys behind the numbers in section 2 of the overview. The range is corrected to 41% to 51% |
