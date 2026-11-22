@@ -294,6 +294,35 @@ blueprint of the current phase is published.
 After Phase 5: a field report on boundary incidents, with data from design
 partners. This is the evidence that the research could not find.
 
+### Ideas borrowed from guided cloud labs
+
+On 22 November 2026 we reviewed a guided cloud lab on a large learning
+platform: a guide on the left, a browser IDE on the right, 1-click services,
+an AI teaching assistant, and a reset button. The lab itself does not fit
+DataForge, but some of its ideas help engineers and design partners adopt
+the tool. Each idea goes in the phase below. None of them changes an exit
+criterion.
+
+| Idea | What DataForge does with it | Phase |
+|---|---|---|
+| Time and prerequisites at the top of each lab | Each runbook starts with the time it takes and what you need before you start | Now, from Phase 1 |
+| A walkthrough: the guide next to the real tool | 1 walkthrough of the reference platform. The guide is on 1 side, and a real pull request with its impact comment is on the other. For design partners and public proof (goal 2) | 1 |
+| Reset lab | 1 documented command that destroys and rebuilds the reference platform from Terraform | 1 |
+| "Ready in less than a minute" | A target time to the first impact report, measured and published. This reduces setup friction (risk 6) | 2 |
+| 1-click services in a toolbox | `dataforge demo`: the CLI runs on the recorded metadata fixtures of rule 6. A person can try it without an Azure account | 2 |
+| AI teaching assistant | Parked. Possible later: an LLM explains a finished impact report in plain words. It reads only the report and never decides who is affected. Starts only if design partners ask for it (rule 3) | Not planned |
+
+What we do not take, and why:
+
+- **The browser IDE.** DataForge runs in CI and in the terminal of the
+  engineer. A hosted IDE adds containers, cost, and an isolation problem.
+- **Question answering with retrieval (RAG) for impact.** A retriever can
+  miss a consumer. The list of affected owners must be complete and
+  repeatable, so it comes from a graph traversal, never from an LLM.
+- **Catalog metadata sent to an external LLM provider.** Table names, owners,
+  and lineage can be sensitive for a client. Rule 4 keeps rows out, but
+  metadata also stays inside the client boundary by default.
+
 ### Next steps
 
 1. **Validate the problem with desk research (2 weeks, parallel to Phase 1).**
@@ -349,6 +378,7 @@ partners. This is the evidence that the research could not find.
 | 19 Nov 2026 | Redesign. Learning by building stopped. New direction: ownership-aware change impact across Terraform, Unity Catalog, and dbt |
 | 19 Nov 2026 | Integration model added: runs inside client pipelines, read-only, owner tagging as the main setup task |
 | 19 Nov 2026 | Pull request 3 merged: the Terraform becomes the reference platform. Interviews replaced by desk research |
+| 22 Nov 2026 | Review of a guided cloud lab. 5 adoption ideas added to the roadmap, 1 parked |
 
 ---
 
